@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Covoit Santé — Optimiseur de RDV</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">🚑🌱</div>
+      <div>
+        <h1>Covoit Santé</h1>
+        <p class="subtitle">Optimiser les rendez-vous pour favoriser le covoiturage</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Choisir la journée à optimiser</h2>
+      <form method="post" class="form-grid">
+        <label>
+          <span>Jour</span>
+          <input type="date" name="date"
+       min="2022-01-01" max="2022-12-31"
+       value="{{ selected_date or default_date }}" required>
+
+        </label>
+        <label>
+          <span>Distance aller jusqu'au site (km)</span>
+          <input type="number" name="site_km" step="0.1" min="0" value="{{ site_km or defaults.site_km }}">
+        </label>
+        <div class="hints">
+          <small>Hypothèses : rayon covoit = {{ defaults.max_dist }} km, écart horaire ≤ {{ defaults.max_dt }} min, facteur d'émission ≈ {{ defaults.emission }} kgCO₂/km.</small>
+        </div>
+        <button type="submit" class="primary">Optimiser les RDV</button>
+      </form>
+      {% if error %}
+        <div class="alert">
+          <strong>Oups —</strong> {{ error }}
+        </div>
+      {% endif %}
+    </section>
+
+    {% if results %}
+    <section class="grid-2">
+      <div class="card kpis">
+        <h2>Bilan de la journée</h2>
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-value">{{ results.count_rdv }}</div>
+            <div class="kpi-label">RDV ce jour</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-value">{{ results.count_pairs_before }}</div>
+            <div class="kpi-label">Paires (avant)</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-value">{{ results.count_pairs_after }}</div>
+            <div class="kpi-label">Paires (après)</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-value {{ 'pos' if results.delta_pairs>=0 else 'neg' }}">{{ results.delta_pairs | string }}</div>
+            <div class="kpi-label">Gain de paires</div>
+          </div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-value">{{ results.saved_km }}</div>
+            <div class="kpi-label">km évités (≈)</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-value">{{ results.saved_kg }}</div>
+            <div class="kpi-label">kgCO₂ évités (≈)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card plots">
+        <h2>Avant / Après</h2>
+        <div class="plots-row">
+          <figure>
+            <img src="{{ url_for('static', filename=results.before_plot) }}" alt="Avant">
+            <figcaption>Avant optimisation</figcaption>
+          </figure>
+          <figure>
+            <img src="{{ url_for('static', filename=results.after_plot) }}" alt="Après">
+            <figcaption>Après optimisation</figcaption>
+          </figure>
+        </div>
+        <small>Repères 3D : longitude, latitude, heure (min). Couleurs par motif.</small>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Couples de covoiturage (après optimisation)</h2>
+      {% if results.pairs_after|length == 0 %}
+        <p>Aucun couple admissible selon les critères.</p>
+      {% else %}
+        <div class="table-wrapper">
+          <table>
+            <thead>
+                <tr>
+                  <th>Trajet</th>
+                  <th>NIP 1</th><th>NIP 2</th>
+                  <th>Motif 1</th><th>Motif 2</th>
+                  <th>Heure 1</th><th>Heure 2</th>
+                  <th>Δ (min)</th><th>Distance (km)</th>
+                </tr>
+              </thead>
+            <thead>
+              <tr>
+                <th>NIP 1</th><th>NIP 2</th>
+                <th>Motif 1</th><th>Motif 2</th>
+                <th>Heure 1</th><th>Heure 2</th>
+                <th>Δ (min)</th><th>Distance (km)</th>
+              </tr>
+            </thead>
+            <tbody>
+                {% for r in results.pairs_after %}
+                <tr>
+                  <td>{{ r.Trajet }}</td>
+                  <td>{{ r.NIP_1 }}</td>
+                  <td>{{ r.NIP_2 }}</td>
+                  <td>{{ r.Motif_1 }}</td>
+                  <td>{{ r.Motif_2 }}</td>
+                  <td>{{ r.Heure_1 }}</td>
+                  <td>{{ r.Heure_2 }}</td>
+                  <td>{{ r.Delta_min }}</td>
+                  <td>{{ r.Distance_km }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+          </table>
+        </div>
+      {% endif %}
+    </section>
+    {% endif %}
+  </main>
+
+  <footer>
+    <span>© Covoit Santé — prototype</span>
+  </footer>
+</body>
+</html>
